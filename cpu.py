@@ -34,9 +34,7 @@ class CPU:
         self.reg = [0] * 7 + [0xF4]
         self.pc = 0
         self.flag = False
-        self.E = 0
-        self.L = 0
-        self.G = 0
+        self.FL = 0b00000000
         self.branchtable = {}
         self.branchtable[HLT] = self.handle_HLT
         self.branchtable[LDI] = self.handle_LDI
@@ -82,16 +80,14 @@ class CPU:
         elif op == 'MUL':
             self.reg[reg_a] *= self.reg[reg_b]
         elif op == 'CMP':
-            # reset all CMP flags
-            self.E = 0
-            self.G = 0
-            self.L = 0
+            # reset CMP flag
+            self.FL = 0b00000000
             if self.reg[reg_a] == self.reg[reg_b]:
-                self.E = 1
+                self.FL = 0b00000001
             elif self.reg[reg_a] > self.reg[reg_b]:
-                self.G = 1
+                self.FL = 0b00000010
             else:
-                self.L = 1
+                self.FL = 0b00000100
         elif op == 'AND':
             self.reg[reg_a] &= self.reg[reg_b]
         elif op == 'OR':
@@ -185,10 +181,10 @@ class CPU:
         self.pc = self.reg[op_a]
 
     def handle_JNE(self, op_a, op_b):
-        self.pc = self.reg[op_a] if self.E == 0 else self.pc + 2
+        self.pc = self.reg[op_a] if self.FL != 0b00000001 else self.pc + 2
     
     def handle_JEQ(self, op_a, op_b):
-        self.pc = self.reg[op_a] if self.E == 1 else self.pc + 2
+        self.pc = self.reg[op_a] if self.FL == 0b00000001 else self.pc + 2
 
     def handle_AND(self, op_a, op_b):
         self.alu('AND', op_a, op_b)

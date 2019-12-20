@@ -22,6 +22,7 @@ MOD = 0b10100100
 SHL = 0b10101100
 SHR = 0b10101101
 XOR = 0b10101011
+ADDI = 0b10100101
 
 SP = 7
 
@@ -56,6 +57,7 @@ class CPU:
         self.branchtable[SHL] = self.handle_SHL
         self.branchtable[SHR] = self.handle_SHR
         self.branchtable[MOD] = self.handle_MOD
+        self.branchtable[ADDI] = self.handle_ADDI
         
     def load(self):
         """Load a program into memory."""
@@ -104,6 +106,8 @@ class CPU:
             if reg_b == 0:
                 raise Exception('Cannot divide by 0')
             self.reg[reg_a] %= self.reg[reg_b]
+        elif op == 'ADDI':
+            self.reg[reg_a] += reg_b
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -212,6 +216,10 @@ class CPU:
     
     def handle_MOD(self, op_a, op_b):
         self.alu('MOD', op_a, op_b)
+        self.pc += 3
+
+    def handle_ADDI(self, op_a, op_b):
+        self.alu('ADDI', op_a, op_b)
         self.pc += 3
 
     def run(self):

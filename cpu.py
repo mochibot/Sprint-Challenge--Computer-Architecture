@@ -15,6 +15,13 @@ CMP = 0b10100111
 JMP = 0b01010100
 JEQ = 0b01010101
 JNE = 0b01010110
+AND = 0b10101000
+NOT = 0b01101001
+OR = 0b10101010
+MOD = 0b10100100
+SHL = 0b10101100
+SHR = 0b10101101
+XOR = 0b10101011
 
 SP = 7
 
@@ -44,27 +51,17 @@ class CPU:
         self.branchtable[JMP] = self.handle_JMP
         self.branchtable[JEQ] = self.handle_JEQ
         self.branchtable[JNE] = self.handle_JNE
-
+        self.branchtable[AND] = self.handle_AND
+        self.branchtable[OR] = self.handle_OR
+        self.branchtable[XOR] = self.handle_XOR
+        self.branchtable[NOT] = self.handle_NOT
+        self.branchtable[SHL] = self.handle_SHL
+        self.branchtable[SHR] = self.handle_SHR
+        self.branchtable[MOD] = self.handle_MOD
+        
     def load(self):
         """Load a program into memory."""
-
         address = 0
-
-        # For now, we've just hardcoded a program:
-        # program = [
-        #     # From print8.ls8
-        #     0b10000010, # LDI R0,8
-        #     0b00000000,
-        #     0b00001000,
-        #     0b01000111, # PRN R0
-        #     0b00000000,
-        #     0b00000001, # HLT
-        # ]
-
-        # for instruction in program:
-        #     self.ram[address] = instruction
-        #     address += 1
-
         if len(sys.argv) != 2:
             sys.exit('Please provide input in the format of "ls8.py [filname]"')
 
@@ -84,6 +81,33 @@ class CPU:
         #elif op == "SUB": etc
         elif op == 'MUL':
             self.reg[reg_a] *= self.reg[reg_b]
+        elif op == 'CMP':
+            # reset all CMP flags
+            self.E = 0
+            self.G = 0
+            self.L = 0
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.E = 1
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                self.G = 1
+            else:
+                self.L = 1
+        elif op == 'AND':
+            self.reg[reg_a] &= self.reg[reg_b]
+        elif op == 'OR':
+            self.reg[reg_a] |= self.reg[reg_b]
+        elif op == 'NOT':
+            self.reg[reg_a] = ~ self.reg[reg_a]
+        elif op == 'XOR':
+            self.reg[reg_a] ^= self.reg[reg_b]
+        elif op == 'SHL':
+            self.reg[reg_a] = self.reg[reg_a] << self.reg[reg_b]
+        elif op == 'SHR':
+            self.reg[reg_a] = self.reg[reg_a] >> self.reg[reg_b]
+        elif op == 'MOD':
+            if reg_b == 0:
+                raise Exception('Cannot divide by 0')
+            self.reg[reg_a] %= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -154,31 +178,45 @@ class CPU:
         self.reg[SP] += 1 
 
     def handle_CMP(self, op_a, op_b):
-        self.E = 0
-        self.G = 0
-        self.L = 0
-        if self.reg[op_a] == self.reg[op_b]:
-            self.E = 1
-        elif self.reg[op_a] > self.reg[op_b]:
-            self.G = 1
-        else:
-            self.L = 1
+        self.alu('CMP', op_a, op_b)
         self.pc += 3
 
     def handle_JMP(self, op_a, op_b):
         self.pc = self.reg[op_a]
 
     def handle_JNE(self, op_a, op_b):
-        if self.E == 0:
-            self.pc = self.reg[op_a]
-        else: 
-            self.pc += 2
+        self.pc = self.reg[op_a] if self.E == 0 else self.pc + 2
     
     def handle_JEQ(self, op_a, op_b):
-        if self.E == 1:
-            self.pc = self.reg[op_a]
-        else: 
-            self.pc += 2
+        self.pc = self.reg[op_a] if self.E == 1 else self.pc + 2
+
+    def handle_AND(self, op_a, op_b):
+        self.alu('AND', op_a, op_b)
+        self.pc += 3
+    
+    def handle_OR(self, op_a, op_b):
+        self.alu('OR', op_a, op_b)
+        self.pc += 3
+
+    def handle_XOR(self, op_a, op_b):
+        self.alu('XOR', op_a, op_b)
+        self.pc += 3
+
+    def handle_NOT(self, op_a, op_b):
+        self.alu('NOT', op_a, op_b)
+        self.pc += 2
+
+    def handle_SHL(self, op_a, op_b):
+        self.alu('SHL', op_a, op_b)
+        self.pc += 3
+
+    def handle_SHR(self, op_a, op_b):
+        self.alu('SHR', op_a, op_b)
+        self.pc += 3
+    
+    def handle_MOD(self, op_a, op_b):
+        self.alu('MOD', op_a, op_b)
+        self.pc += 3
 
     def run(self):
         """Run the CPU."""
